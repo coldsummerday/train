@@ -1,24 +1,30 @@
-import time
-import socket
-import threading
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
-def tcplink(sock,addr):
+'a server example which send hello to client.'
+
+import time, socket, threading
+
+def tcplink(sock, addr):
+    print 'Accept new connection from %s:%s...' % addr
+    sock.send('Welcome!')
     while True:
         data = sock.recv(1024)
-        if data =='exit' or not data:
+        time.sleep(1)
+        if data == 'exit' or not data:
             break
-    print(data)
+        sock.send('Hello, %s!' % data)
     sock.close()
+    print 'Connection from %s:%s closed.' % addr
 
-def tcpinit():
-    sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-    sock.bind(('192.168.199.154',9999))
-    sock.listen(5)
-    return sock
-
-if __name__=="__main__":
-    sock = tcpinit()
-    while True:
-        socket_handle,addr=sock.accept()
-        t=threading.Thread(target=tcplink,args=(socket_handle,addr))
-        t.start()
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# 监听端口:
+s.bind(('192.168.199.154', 9999))
+s.listen(5)
+print 'Waiting for connection...'
+while True:
+    # 接受一个新连接:
+    sock, addr = s.accept()
+    # 创建新线程来处理TCP连接:
+    t = threading.Thread(target=tcplink, args=(sock, addr))
+    t.start()
