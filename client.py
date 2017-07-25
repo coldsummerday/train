@@ -8,7 +8,7 @@ import numpy as np
 import socket
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 # 建立连接:
-s.connect(('192.168.0.114', 9999))
+s.connect(('192.168.43.17', 9999))
 # 接收欢迎消息:
 
 

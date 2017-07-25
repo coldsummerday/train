@@ -14,12 +14,18 @@ import imghdr
 import numpy as np
 from six.moves import urllib
 import tensorflow as tf
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL']='3'
 
 
 
-def tcplink(sock,addr):
+def rosinit():
     talker = rospy.Publisher("chatter",std_msgs.msg.Float32,queue_size=20)
     rospy.init_node('tcpclassfy',anonymous=True)
+    return talker
+
+def tcplink(sock,addr):
+    global talker
     #rate =rospy.Rate(10)
     while True:
         data=sock.recv(1024)
@@ -48,7 +54,6 @@ def tcplink(sock,addr):
                 talker.publish(float(4.2))
             print(vdata)
         if data[0]=='p':
-            print(data)
             size=data.split(':')[1]
             size = int(size)
             recvd_data = 0
@@ -61,15 +66,31 @@ def tcplink(sock,addr):
                     pdata = sock.recv(1024)
                     lengh = len(pdata)
                     recvd_data+=len(pdata)
-                imagefile.write(pdata)
+                imagefile.write(pdata) 
+            print("image recv over\n")
             imagefile.close()
-            classcification = classfy('/sd/%s.jpg' %(str(size)))
-            typeMessage = classfytoFloat(classcification)
-            talker.publish(float(typeMessage))
-            print("the image is :"+classcification)
+            imgtype = imghdr.what('/sd/%s.jpg' %(str(size)))
+            classcification,score = classfy('/sd/%s.jpg' %(str(size)))
+            print(classcification,score)
+            if score<0.02:
+                continue
+            
+            talker.publish(swithClassfiCation(classcification))
 	#else:
 	    #talker.publish("Not find")
     sock.close()
+
+def swithClassfiCation(classcification):
+    if classcification=='clothes':
+        return float(5.2)
+    if classcification=='drink':
+        return float(6.2)
+    if classcification=='householdproducts':
+        return float(7.2)
+    if classcification=='snacks':
+        return float(8.2)
+    return(float(9.2))
+
 
 def getLabels(labelsName):
     labels = []
@@ -82,16 +103,6 @@ def create_graph(gfile):
         graph_def.ParseFromString(f.read())
         tf.import_graph_def(graph_def,name='')
 
-def classfytoFloat(classcification):
-    if classcification=='snacks':
-        return 5.2
-    if classcification=='clothes':
-        return 6.2
-    if classcification=='drink':
-        return 7.2
-    if classcification=='householdproducts':
-        return 8.2
-    return 0.0
 
 
 def classfy(imagefile):
@@ -106,7 +117,7 @@ def classfy(imagefile):
         for index in top:
             human_string = labels[index]
             score = predictions[0][index]
-            return human_string
+            return human_string,score
 
 
 
@@ -115,18 +126,15 @@ def sockinit():
     s.bind(('192.168.0.114',9999))
     s.listen(5)
     return s
-def getTalker():
-    talker=rospy.Publisher('controller',std_msgs.msg.String,queue_size=20)
-    rospy.init_node("tcpclassfy",anonymous=True)
-    return talker
     
 if __name__=="__main__":
-
     labels=getLabels('/home/ubuntu/marketcar/marketcar.txt')
     create_graph('/home/ubuntu/marketcar/marketcar.gp')
+    talker = rosinit()
     sock=sockinit()
+    print("init finished") 
     while True:
         s,addr=sock.accept()
-	print('1')
+        print("connect")
         tcplink(s,addr)
         
